@@ -1,5 +1,4 @@
 refactor_alter_child_process_fork_to_use_execute_script_with.patch
-feat_add_uv_loop_watcher_queue_code.patch
 feat_initialize_asar_support.patch
 expose_get_builtin_module_function.patch
 build_add_gn_build_files.patch
@@ -27,3 +26,4 @@ test_add_fixture_trim_option.patch
 fix_crash_caused_by_gethostnamew_on_windows_7.patch
 fix_suppress_clang_-wdeprecated-declarations_in_libuv.patch
 fix_don_t_create_console_window_when_creating_process.patch
+feat_add_uv_loop_interrupt_on_io_change_option_to_uv_loop_configure.patch
