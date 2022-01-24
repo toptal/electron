@@ -360,6 +360,7 @@ NativeWindowMac::NativeWindowMac(const gin_helper::Dictionary& options,
       InternalSetWindowButtonVisibility(false);
     } else {
       buttons_proxy_.reset([[WindowButtonsProxy alloc] initWithWindow:window_]);
+      [buttons_proxy_ setHeight:titlebar_overlay_height()];
       if (traffic_light_position_) {
         [buttons_proxy_ setMargin:*traffic_light_position_];
       } else if (title_bar_style_ == TitleBarStyle::kHiddenInset) {
@@ -1813,24 +1814,22 @@ void NativeWindowMac::SetForwardMouseMessages(bool forward) {
 }
 
 gfx::Rect NativeWindowMac::GetWindowControlsOverlayRect() {
-  gfx::Rect bounding_rect;
-  if (titlebar_overlay_ && !has_frame() && buttons_proxy_ &&
-      [buttons_proxy_ isVisible]) {
-    NSRect button_frame = [buttons_proxy_ getButtonsBounds];
-    gfx::Point buttons_view_margin = [buttons_proxy_ getMargin];
-    const int overlay_width = GetContentSize().width() - NSWidth(button_frame) -
-                              buttons_view_margin.x();
-    CGFloat overlay_height =
-        NSHeight(button_frame) + buttons_view_margin.y() * 2;
-    if (base::i18n::IsRTL()) {
-      bounding_rect = gfx::Rect(0, 0, overlay_width, overlay_height);
+  if (titlebar_overlay_ && buttons_proxy_ &&
+      window_button_visibility_.value_or(true)) {
+    NSRect buttons = [buttons_proxy_ getButtonsContainerBounds];
+    gfx::Rect overlay;
+    overlay.set_width(GetContentSize().width() - NSWidth(buttons));
+    if ([buttons_proxy_ useCustomHeight]) {
+      overlay.set_height(titlebar_overlay_height());
     } else {
-      bounding_rect =
-          gfx::Rect(button_frame.size.width + buttons_view_margin.x(), 0,
-                    overlay_width, overlay_height);
+      overlay.set_height(NSHeight(buttons));
     }
+
+    if (!base::i18n::IsRTL())
+      overlay.set_x(NSMaxX(buttons));
+    return overlay;
   }
-  return bounding_rect;
+  return gfx::Rect();
 }
 
 // static
