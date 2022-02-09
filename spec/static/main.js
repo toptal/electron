@@ -109,6 +109,9 @@ app.whenReady().then(async function () {
       backgroundThrottling: false,
       nodeIntegration: true,
       webviewTag: true,
+      // FIXME(zcbenz): Enable nativeWindowOpen will cause renderer to hang on
+      // exit sometimes on Windows.
+      nativeWindowOpen: false,
       contextIsolation: false
     }
   });
