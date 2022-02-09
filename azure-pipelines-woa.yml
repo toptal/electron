@@ -1,8 +1,6 @@
 steps:
-- task: CopyFiles@2
-  displayName: 'Copy Files to: src\electron'
-  inputs:
-    TargetFolder: src\electron
+- checkout: self
+  path: src\electron
 
 - script: |
     cd src\electron
@@ -53,21 +51,22 @@ steps:
   env:
     APPVEYOR_TOKEN: $(APPVEYOR_TOKEN)
 
-- powershell: |
-    try {
-      $localArtifactPath = "$pwd\src\pdb.zip"
-      $serverArtifactPath = "$env:APPVEYOR_URL/buildjobs/$env:APPVEYOR_JOB_ID/artifacts/pdb.zip"
-      Invoke-RestMethod -Method Get -Uri $serverArtifactPath -OutFile $localArtifactPath -Headers @{ "Authorization" = "Bearer $env:APPVEYOR_TOKEN" }
-      cd src
-      & "${env:ProgramFiles(x86)}\7-Zip\7z.exe" x -y pdb.zip
-    } catch {
-      Write-Host "There was an exception encountered while downloading pdb files:" $_.Exception.Message
-    } finally {
-      $global:LASTEXITCODE = 0
-    }
-  displayName: 'Download pdb files for detailed stacktraces'
-  env:
-    APPVEYOR_TOKEN: $(APPVEYOR_TOKEN)
+# Uncomment the following block if pdb files are needed to debug issues
+# - powershell: |
+#     try {
+#       $localArtifactPath = "$pwd\src\pdb.zip"
+#       $serverArtifactPath = "$env:APPVEYOR_URL/buildjobs/$env:APPVEYOR_JOB_ID/artifacts/pdb.zip"
+#       Invoke-RestMethod -Method Get -Uri $serverArtifactPath -OutFile $localArtifactPath -Headers @{ "Authorization" = "Bearer $env:APPVEYOR_TOKEN" }
+#       cd src
+#       & "${env:ProgramFiles(x86)}\7-Zip\7z.exe" x -y pdb.zip
+#     } catch {
+#       Write-Host "There was an exception encountered while downloading pdb files:" $_.Exception.Message
+#     } finally {
+#       $global:LASTEXITCODE = 0
+#     }
+#   displayName: 'Download pdb files for detailed stacktraces'
+#   env:
+#     APPVEYOR_TOKEN: $(APPVEYOR_TOKEN)
 
 - powershell: |
     New-Item src\out\Default\gen\node_headers\Release -Type directory
@@ -79,7 +78,7 @@ steps:
     set npm_config_nodedir=%cd%\out\Default\gen\node_headers
     set npm_config_arch=arm64
     cd electron
-    node script/yarn test --runners=main --runTestFilesSeperately --enable-logging --disable-features=CalculateNativeWinOcclusion
+    node script/yarn test --runners=main --enable-logging --disable-features=CalculateNativeWinOcclusion
   displayName: 'Run Electron Main process tests'
   env:
     ELECTRON_ENABLE_STACK_DUMPING: true
@@ -102,7 +101,7 @@ steps:
     ELECTRON_TEST_RESULTS_DIR: junit
     MOCHA_MULTI_REPORTERS: 'mocha-junit-reporter, tap'
     MOCHA_REPORTER: mocha-multi-reporters
-  condition: always()    
+  condition: succeededOrFailed()
 
 - task: PublishTestResults@2
   displayName: 'Publish Test Results'
