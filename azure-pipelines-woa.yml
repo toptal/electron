@@ -36,7 +36,7 @@ steps:
     $localArtifactPath = "$(System.DefaultWorkingDirectory)\src\node_headers.zip"
     $serverArtifactPath = "$env:APPVEYOR_URL/buildjobs/$env:APPVEYOR_JOB_ID/artifacts/node_headers.zip"
     Invoke-RestMethod -Method Get -Uri $serverArtifactPath -OutFile $localArtifactPath -Headers @{ "Authorization" = "Bearer $env:APPVEYOR_TOKEN" }
-    cd "$(System.DefaultWorkingDirectory)\src
+    cd $(System.DefaultWorkingDirectory)\src
     & "${env:ProgramFiles(x86)}\7-Zip\7z.exe" x -y node_headers.zip
   displayName: 'Download node headers for test'
   env:
