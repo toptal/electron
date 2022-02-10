@@ -1,9 +1,8 @@
 steps:
 - checkout: self
-  path: src\electron
+  path: s\src\electron
 
 - script: |
-    cd src\electron
     node script/yarn.js install --frozen-lockfile
   displayName: 'Yarn install'
 
@@ -11,13 +10,13 @@ steps:
     $localArtifactPath = "$pwd\dist.zip"
     $serverArtifactPath = "$env:APPVEYOR_URL/buildjobs/$env:APPVEYOR_JOB_ID/artifacts/dist.zip"
     Invoke-RestMethod -Method Get -Uri $serverArtifactPath -OutFile $localArtifactPath -Headers @{ "Authorization" = "Bearer $env:APPVEYOR_TOKEN" }
-    & "${env:ProgramFiles(x86)}\7-Zip\7z.exe" x -osrc\out\Default -y $localArtifactPath
+    & "${env:ProgramFiles(x86)}\7-Zip\7z.exe" x -o$(System.DefaultWorkingDirectory)\src\out\Default -y $localArtifactPath
   displayName: 'Download and extract dist.zip for test'
   env:
     APPVEYOR_TOKEN: $(APPVEYOR_TOKEN)
 
 - powershell: |
-    $localArtifactPath = "$pwd\src\out\Default\shell_browser_ui_unittests.exe"
+    $localArtifactPath = "$(System.DefaultWorkingDirectory)\src\out\Default\shell_browser_ui_unittests.exe"
     $serverArtifactPath = "$env:APPVEYOR_URL/buildjobs/$env:APPVEYOR_JOB_ID/artifacts/shell_browser_ui_unittests.exe"
     Invoke-RestMethod -Method Get -Uri $serverArtifactPath -OutFile $localArtifactPath -Headers @{ "Authorization" = "Bearer $env:APPVEYOR_TOKEN" }
   displayName: 'Download and extract native test executables for test'
@@ -28,23 +27,23 @@ steps:
     $localArtifactPath = "$pwd\ffmpeg.zip"
     $serverArtifactPath = "$env:APPVEYOR_URL/buildjobs/$env:APPVEYOR_JOB_ID/artifacts/ffmpeg.zip"
     Invoke-RestMethod -Method Get -Uri $serverArtifactPath -OutFile $localArtifactPath -Headers @{ "Authorization" = "Bearer $env:APPVEYOR_TOKEN" }
-    & "${env:ProgramFiles(x86)}\7-Zip\7z.exe" x -osrc\out\ffmpeg $localArtifactPath
+    & "${env:ProgramFiles(x86)}\7-Zip\7z.exe" x -o$(System.DefaultWorkingDirectory)\src\out\ffmpeg $localArtifactPath
   displayName: 'Download and extract ffmpeg.zip for test'
   env:
     APPVEYOR_TOKEN: $(APPVEYOR_TOKEN)
 
 - powershell: |
-    $localArtifactPath = "$pwd\src\node_headers.zip"
+    $localArtifactPath = "$(System.DefaultWorkingDirectory)\src\node_headers.zip"
     $serverArtifactPath = "$env:APPVEYOR_URL/buildjobs/$env:APPVEYOR_JOB_ID/artifacts/node_headers.zip"
     Invoke-RestMethod -Method Get -Uri $serverArtifactPath -OutFile $localArtifactPath -Headers @{ "Authorization" = "Bearer $env:APPVEYOR_TOKEN" }
-    cd src
+    cd "$(System.DefaultWorkingDirectory)\src
     & "${env:ProgramFiles(x86)}\7-Zip\7z.exe" x -y node_headers.zip
   displayName: 'Download node headers for test'
   env:
     APPVEYOR_TOKEN: $(APPVEYOR_TOKEN)
 
 - powershell: |
-    $localArtifactPath = "$pwd\src\out\Default\electron.lib"
+    $localArtifactPath = "$(System.DefaultWorkingDirectory)\src\out\Default\electron.lib"
     $serverArtifactPath = "$env:APPVEYOR_URL/buildjobs/$env:APPVEYOR_JOB_ID/artifacts/electron.lib"
     Invoke-RestMethod -Method Get -Uri $serverArtifactPath -OutFile $localArtifactPath -Headers @{ "Authorization" = "Bearer $env:APPVEYOR_TOKEN" }
   displayName: 'Download electron.lib for test'
@@ -54,10 +53,10 @@ steps:
 # Uncomment the following block if pdb files are needed to debug issues
 # - powershell: |
 #     try {
-#       $localArtifactPath = "$pwd\src\pdb.zip"
+#       $localArtifactPath = "$(System.DefaultWorkingDirectory)\src\pdb.zip"
 #       $serverArtifactPath = "$env:APPVEYOR_URL/buildjobs/$env:APPVEYOR_JOB_ID/artifacts/pdb.zip"
 #       Invoke-RestMethod -Method Get -Uri $serverArtifactPath -OutFile $localArtifactPath -Headers @{ "Authorization" = "Bearer $env:APPVEYOR_TOKEN" }
-#       cd src
+#       cd $(System.DefaultWorkingDirectory)\src
 #       & "${env:ProgramFiles(x86)}\7-Zip\7z.exe" x -y pdb.zip
 #     } catch {
 #       Write-Host "There was an exception encountered while downloading pdb files:" $_.Exception.Message
@@ -69,12 +68,12 @@ steps:
 #     APPVEYOR_TOKEN: $(APPVEYOR_TOKEN)
 
 - powershell: |
-    New-Item src\out\Default\gen\node_headers\Release -Type directory
-    Copy-Item -path src\out\Default\electron.lib -destination src\out\Default\gen\node_headers\Release\node.lib
+    New-Item $(System.DefaultWorkingDirectory)\src\out\Default\gen\node_headers\Release -Type directory
+    Copy-Item -path $(System.DefaultWorkingDirectory)\src\out\Default\electron.lib -destination $(System.DefaultWorkingDirectory)\src\out\Default\gen\node_headers\Release\node.lib
   displayName: 'Setup node headers'
 
 - script: |
-    cd src
+    cd $(System.DefaultWorkingDirectory)\src
     set npm_config_nodedir=%cd%\out\Default\gen\node_headers
     set npm_config_arch=arm64
     cd electron
@@ -89,7 +88,7 @@ steps:
     MOCHA_REPORTER: mocha-multi-reporters
 
 - script: |
-    cd src
+    cd $(System.DefaultWorkingDirectory)\src
     set npm_config_nodedir=%cd%\out\Default\gen\node_headers
     set npm_config_arch=arm64
     cd electron
@@ -111,7 +110,7 @@ steps:
   condition: always()
 
 - script: |
-    cd src
+    cd $(System.DefaultWorkingDirectory)\src
     echo "Verifying non proprietary ffmpeg"
     python electron\script\verify-ffmpeg.py --build-dir out\Default --source-root %cd% --ffmpeg-path out\ffmpeg
   displayName: 'Verify ffmpeg'
