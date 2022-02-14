@@ -464,7 +464,6 @@ step-fix-sync: &step-fix-sync
       fi
 
       cd src/third_party/angle
-      git repack -a
       rm .git/objects/info/alternates
       git remote set-url origin https://chromium.googlesource.com/angle/angle.git
       git fetch
