@@ -3510,7 +3510,14 @@ void WebContents::EnumerateDirectory(
 
 bool WebContents::IsFullscreenForTabOrPending(
     const content::WebContents* source) {
-  return html_fullscreen_;
+  bool eam_fs = exclusive_access_manager_->fullscreen_controller()
+                    ->IsFullscreenForTabOrPending(web_contents());
+  bool transition_fs = owner_window()
+                           ? owner_window()->fullscreen_transition_state() !=
+                                 NativeWindow::FullScreenTransitionState::NONE
+                           : false;
+
+  return html_fullscreen_ || transition_fs || eam_fs;
 }
 
 bool WebContents::TakeFocus(content::WebContents* source, bool reverse) {
@@ -3833,9 +3840,8 @@ void WebContents::SetHtmlApiFullscreen(bool enter_fullscreen) {
           ? !web_preferences->ShouldDisableHtmlFullscreenWindowResize()
           : true;
 
-  if (html_fullscreenable) {
+  if (html_fullscreenable)
     owner_window_->SetFullScreen(enter_fullscreen);
-  }
 
   UpdateHtmlApiFullscreen(enter_fullscreen);
   native_fullscreen_ = false;
