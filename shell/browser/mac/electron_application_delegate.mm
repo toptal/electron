@@ -43,29 +43,6 @@ static base::mac::ScopedObjCClassSwizzler* g_swizzle_imk_input_session;
 @end
 #endif  // BUILDFLAG(USE_ALLOCATOR_SHIM)
 
-static NSDictionary* UNNotificationResponseToNSDictionary(
-    UNNotificationResponse* response) API_AVAILABLE(macosx(10.14)) {
-  // [response isKindOfClass:[UNNotificationResponse class]]
-  if (![response respondsToSelector:@selector(actionIdentifier)] ||
-      ![response respondsToSelector:@selector(notification)]) {
-    return nil;
-  }
-
-  NSMutableDictionary* result = [[NSMutableDictionary alloc] init];
-  result[@"actionIdentifier"] = response.actionIdentifier;
-  result[@"date"] = @(response.notification.date.timeIntervalSince1970);
-  result[@"identifier"] = response.notification.request.identifier;
-  result[@"userInfo"] = response.notification.request.content.userInfo;
-
-  // [response isKindOfClass:[UNTextInputNotificationResponse class]]
-  if ([response respondsToSelector:@selector(userText)]) {
-    result[@"userText"] =
-        static_cast<UNTextInputNotificationResponse*>(response).userText;
-  }
-
-  return result;
-}
-
 @implementation ElectronApplicationDelegate
 
 - (void)setApplicationDockMenu:(electron::ElectronMenuModel*)model {
