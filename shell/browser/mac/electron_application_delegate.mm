@@ -43,29 +43,6 @@ static base::mac::ScopedObjCClassSwizzler* g_swizzle_imk_input_session;
 @end
 #endif  // BUILDFLAG(USE_ALLOCATOR_SHIM)
 
-static NSDictionary* UNNotificationResponseToNSDictionary(
-    UNNotificationResponse* response) API_AVAILABLE(macosx(10.14)) {
-  // [response isKindOfClass:[UNNotificationResponse class]]
-  if (![response respondsToSelector:@selector(actionIdentifier)] ||
-      ![response respondsToSelector:@selector(notification)]) {
-    return nil;
-  }
-
-  NSMutableDictionary* result = [[NSMutableDictionary alloc] init];
-  result[@"actionIdentifier"] = response.actionIdentifier;
-  result[@"date"] = @(response.notification.date.timeIntervalSince1970);
-  result[@"identifier"] = response.notification.request.identifier;
-  result[@"userInfo"] = response.notification.request.content.userInfo;
-
-  // [response isKindOfClass:[UNTextInputNotificationResponse class]]
-  if ([response respondsToSelector:@selector(userText)]) {
-    result[@"userText"] =
-        static_cast<UNTextInputNotificationResponse*>(response).userText;
-  }
-
-  return result;
-}
-
 @implementation ElectronApplicationDelegate
 
 - (void)setApplicationDockMenu:(electron::ElectronMenuModel*)model {
@@ -94,7 +71,7 @@ static NSDictionary* UNNotificationResponseToNSDictionary(
 
 - (void)applicationDidFinishLaunching:(NSNotification*)notify {
   NSObject* user_notification =
-      [notify userInfo][NSApplicationLaunchUserNotificationKey];
+      [notify userInfo][(id) @"NSApplicationLaunchUserNotificationKey"];
   NSDictionary* notification_info = nil;
 
   if (user_notification) {
@@ -102,13 +79,19 @@ static NSDictionary* UNNotificationResponseToNSDictionary(
       notification_info =
           [static_cast<NSUserNotification*>(user_notification) userInfo];
     } else if (@available(macOS 10.14, *)) {
-      notification_info = UNNotificationResponseToNSDictionary(
-          static_cast<UNNotificationResponse*>(user_notification));
+      if ([user_notification isKindOfClass:[UNNotificationResponse class]]) {
+        notification_info = electron::UNNotificationResponseToNSDictionary(
+            static_cast<UNNotificationResponse*>(user_notification));
+      }
     }
   }
 
-  electron::Browser::Get()->DidFinishLaunching(
-      electron::NSDictionaryToDictionaryValue(notification_info));
+  if (notification_info) {
+    electron::Browser::Get()->DidFinishLaunching(
+        electron::NSDictionaryToDictionaryValue(notification_info));
+  } else {
+    electron::Browser::Get()->DidFinishLaunching(base::DictionaryValue());
+  }
 
 #if BUILDFLAG(USE_ALLOCATOR_SHIM)
   // Disable fatal OOM to hack around an OS bug https://crbug.com/654695.
@@ -189,6 +172,33 @@ static NSDictionary* UNNotificationResponseToNSDictionary(
 
 - (IBAction)newWindowForTab:(id)sender {
   electron::Browser::Get()->NewWindowForTab();
+}
+
+- (void)application:(NSApplication*)application
+    didRegisterForRemoteNotificationsWithDeviceToken:(NSData*)deviceToken {
+  // https://stackoverflow.com/a/16411517
+  const char* tokenData = static_cast<const char*>([deviceToken bytes]);
+  NSMutableString* tokenString = [NSMutableString string];
+  for (NSUInteger i = 0; i < [deviceToken length]; i++) {
+    [tokenString appendFormat:@"%02.2hhX", tokenData[i]];
+  }
+  electron::Browser::Get()->DidRegisterForRemoteNotificationsWithDeviceToken(
+      base::SysNSStringToUTF8(tokenString));
+}
+
+- (void)application:(NSApplication*)application
+    didFailToRegisterForRemoteNotificationsWithError:(NSError*)error {
+  std::string error_message(base::SysNSStringToUTF8(
+      [NSString stringWithFormat:@"%ld %@ %@", [error code], [error domain],
+                                 [error userInfo]]));
+  electron::Browser::Get()->DidFailToRegisterForRemoteNotificationsWithError(
+      error_message);
+}
+
+- (void)application:(NSApplication*)application
+    didReceiveRemoteNotification:(NSDictionary*)userInfo {
+  electron::Browser::Get()->DidReceiveRemoteNotification(
+      electron::NSDictionaryToDictionaryValue(userInfo));
 }
 
 @end
